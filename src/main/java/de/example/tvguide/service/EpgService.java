@@ -16,10 +16,7 @@ import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -39,8 +36,12 @@ public class EpgService {
     private volatile List<Channel> channels = List.of();
     private volatile List<Programme> programmes = List.of();
 
-    public EpgService(@Value("${epg.source}") Resource source) {
+    private final Set<String> wanted;
+
+    public EpgService(@Value("${epg.source}") Resource source,
+                      @Value("${epg.channels:}") List<String> wantedChannels) {
         this.source = source;
+        this.wanted = Set.copyOf(wantedChannels);
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -48,8 +49,11 @@ public class EpgService {
     public void reload() {
         try (InputStream in = source.getInputStream()) {
             XmltvParser.Result result = parser.parse(in);
-            this.channels = List.copyOf(result.channels());
+            this.channels = result.channels().stream()
+                    .filter(c -> wanted.isEmpty() || wanted.contains(c.id()))
+                    .toList();
             this.programmes = result.programmes().stream()
+                    .filter(p -> wanted.isEmpty() || wanted.contains(p.channelId()))
                     .sorted(Comparator.comparing(Programme::start))
                     .toList();
             log.info("EPG geladen: {} Sender, {} Sendungen (Quelle: {})",
