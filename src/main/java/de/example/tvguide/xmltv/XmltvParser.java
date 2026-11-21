@@ -17,6 +17,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.zip.GZIPInputStream;
 
 /**
@@ -34,6 +35,16 @@ public class XmltvParser {
     private static final DateTimeFormatter WITHOUT_ZONE = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     public Result parse(InputStream rawInput) throws IOException, XMLStreamException {
+        return parse(rawInput, id -> true);
+    }
+
+    /**
+     * Wie {@link #parse(InputStream)}, behält aber nur Sender (und deren Sendungen), für die
+     * {@code channelFilter} true liefert. Der Filter wirkt schon beim Lesen, so entstehen für
+     * uninteressante Sender gar keine Objekte. Das spart Speicher (wichtig bei kleinen Containern).
+     */
+    public Result parse(InputStream rawInput, Predicate<String> channelFilter)
+            throws IOException, XMLStreamException {
         try (InputStream in = maybeGunzip(rawInput)) {
             XMLInputFactory factory = XMLInputFactory.newFactory();
             // Schutz gegen XXE: keine DTDs / externen Entities aus fremden Dateien laden
@@ -47,11 +58,21 @@ public class XmltvParser {
             while (r.hasNext()) {
                 if (r.next() == XMLStreamConstants.START_ELEMENT) {
                     switch (r.getLocalName()) {
-                        case "channel" -> channels.add(readChannel(r));
+                        case "channel" -> {
+                            Channel c = readChannel(r);
+                            if (channelFilter.test(c.id())) {
+                                channels.add(c);
+                            }
+                        }
                         case "programme" -> {
-                            Programme p = readProgramme(r);
-                            if (p != null) {
-                                programmes.add(p);
+                            String channelId = r.getAttributeValue(null, "channel");
+                            // Unerwünschte Sendungen werden nicht gelesen; ihre Kindelemente
+                            // (title, desc, ...) ignoriert die Schleife einfach.
+                            if (channelId != null && channelFilter.test(channelId)) {
+                                Programme p = readProgramme(r);
+                                if (p != null) {
+                                    programmes.add(p);
+                                }
                             }
                         }
                         default -> { /* tv-Wurzelelement etc. */ }

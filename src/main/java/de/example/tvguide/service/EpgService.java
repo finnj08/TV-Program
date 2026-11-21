@@ -50,7 +50,8 @@ public class EpgService {
     @Scheduled(cron = "${epg.refresh-cron:0 0 4 * * *}", zone = "Europe/Berlin")
     public void reload() {
         try (InputStream in = source.getInputStream()) {
-            XmltvParser.Result result = parser.parse(in);
+            // Der Filter greift schon beim Einlesen (spart Speicher auf kleinen Servern)
+            XmltvParser.Result result = parser.parse(in, id -> wanted.isEmpty() || wanted.contains(id));
             this.channels = result.channels().stream()
                     .filter(c -> wanted.isEmpty() || wanted.contains(c.id()))
                     .sorted(Comparator.comparingInt(c -> order.indexOf(c.id())))
