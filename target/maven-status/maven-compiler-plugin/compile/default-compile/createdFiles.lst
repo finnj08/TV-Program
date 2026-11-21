@@ -1,0 +1,7 @@
+de\example\tvguide\model\Programme.class
+de\example\tvguide\xmltv\XmltvParser.class
+de\example\tvguide\web\ProgrammeController.class
+de\example\tvguide\TvGuideApplication.class
+de\example\tvguide\service\EpgService.class
+de\example\tvguide\xmltv\XmltvParser$Result.class
+de\example\tvguide\model\Channel.class
