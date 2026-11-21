@@ -37,11 +37,13 @@ public class EpgService {
     private volatile List<Programme> programmes = List.of();
 
     private final Set<String> wanted;
+    private final List<String> order;
 
     public EpgService(@Value("${epg.source}") Resource source,
                       @Value("${epg.channels:}") List<String> wantedChannels) {
         this.source = source;
         this.wanted = Set.copyOf(wantedChannels);
+        this.order = List.copyOf(wantedChannels);
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -51,6 +53,7 @@ public class EpgService {
             XmltvParser.Result result = parser.parse(in);
             this.channels = result.channels().stream()
                     .filter(c -> wanted.isEmpty() || wanted.contains(c.id()))
+                    .sorted(Comparator.comparingInt(c -> order.indexOf(c.id())))
                     .toList();
             this.programmes = result.programmes().stream()
                     .filter(p -> wanted.isEmpty() || wanted.contains(p.channelId()))
