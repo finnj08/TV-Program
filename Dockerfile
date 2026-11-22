@@ -1,5 +1,5 @@
 # ---------- Stage 1: bauen ----------
-FROM maven:3.9-eclipse-temurin-21 AS build
+FROM maven:3.9-eclipse-temurin-25 AS build
 WORKDIR /build
 
 # Zuerst nur die pom.xml: Abhängigkeiten werden gecacht, solange sie sich nicht ändern
@@ -10,7 +10,7 @@ COPY src ./src
 RUN mvn -B -q -DskipTests package
 
 # ---------- Stage 2: schlankes Laufzeit-Image ----------
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:25-jre
 WORKDIR /app
 
 # Nicht als root laufen lassen
